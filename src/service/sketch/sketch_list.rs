@@ -1,6 +1,7 @@
 use crate::service::sketch::Artboard;
 use crate::Result;
 use serde::Deserialize;
+use simple_fs::SPath;
 use std::collections::HashMap;
 use std::process::Command;
 
@@ -27,9 +28,11 @@ struct SketchArtboard {
 
 // endregion: --- Sketchtool JSON Response Types
 
-pub fn list_artboards(sketch_file: &str) -> Result<Vec<Artboard>> {
+pub fn list_artboards(sketch_file: impl AsRef<SPath>) -> Result<Vec<Artboard>> {
+	let sketch_file = sketch_file.as_ref();
+
 	let output = Command::new(SKETCHTOOL_PATH)
-		.args(["metadata", sketch_file])
+		.args(["metadata", sketch_file.as_str()])
 		.output()
 		.map_err(|e| format!("Failed to execute sketchtool: {e}"))?;
 
