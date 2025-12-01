@@ -1,4 +1,4 @@
-use crate::Result;
+use crate::{Error, Result};
 use crate::service::sketch::list_artboards;
 use crate::support::files;
 use simple_fs::{SPath, ensure_dir};
@@ -24,6 +24,15 @@ pub fn export_artboards(
 
 	if artboards.is_empty() {
 		return Ok(vec![]);
+	}
+
+	// Check if output is a file when multiple artboards match
+	if artboards.len() > 1 && output_dir.is_file() {
+		return Err(Error::custom(format!(
+			"Output path '{}' is a file, but {} artboards matched. Use a directory for multiple exports.",
+			output_dir,
+			artboards.len()
+		)));
 	}
 
 	// Ensure output directory exists
