@@ -42,48 +42,11 @@ Which will give something like:
         "0E3E4A2C-4613-4AB8-B186-2F6290027F37" : {
           "name" : "ico\/place\/in"
         },
-        "1F58B244-44D6-4809-8DBC-F82F5B5F385C" : {
-          "name" : "ico\/check-circle-ot"
-        },
-        "3D2807C2-5D15-4248-A81B-9FD6C012EFEF" : {
-          "name" : "ico\/folder"
-        },
-        "7DCCDBD2-A14E-429F-AF70-9BF4B55BEAC0" : {
-          "name" : "ico\/media"
-        },
-        "8C5BC476-7D87-4774-8455-39A251DCDF68" : {
-          "name" : "ico\/chevron-right"
-        },
-        "9A28AF57-B6BE-4D9F-B1BD-B49BE762BC2D" : {
-          "name" : "ico\/gear"
-        },
-        "45BD9E9E-EEEF-4EA3-A802-1BC2BD442B40" : {
-          "name" : "ico\/place\/out"
-        },
-        "81A68DFE-9D5D-4EDF-BA45-96792281D7BA" : {
-          "name" : "ico\/chevron-down"
-        },
-        "103E09A8-54E3-4071-BC21-BEFC7E5F6DCA" : {
-          "name" : "ico\/user\/ot"
-        },
-        "725A22C5-182F-4FCE-93F3-6C1B2EE68452" : {
-          "name" : "ico\/upload"
-        },
-        "76807D4A-7919-4B82-9EDC-D21AC68FF324" : {
-          "name" : "ico\/lock-ot"
-        },
-        "666099E1-9733-4CCE-BFE3-F3C737FC8E9A" : {
-          "name" : "ico\/tenant"
-        },
-        "D1183DEA-8435-4687-9C04-082CE6C77CF0" : {
-          "name" : "ico\/search"
-        },
-        "F16A8474-EB77-47CA-BAFF-0071C5B76E13" : {
-          "name" : "ico\/process-circle-ot"
-        }
+        ...
       },
       "name" : "ico\/"
     },
+    ...
 ...
 ```
 
@@ -99,6 +62,16 @@ sketchtool \
   --output=<output_directory> \
   export artboards <sketch_file>
 ```
+
+for example
+```sh
+/Applications/Sketch.app/Contents/Resources/sketchtool/bin/sketchtool \
+  --format=svg \
+  --include-symbols=YES \
+  --items=0D2D5069-35B2-4507-BEAD-1898B7B4668B,0E3E4A2C-4613-4AB8-B186-2F6290027F37 \
+  --output=.out/ \
+  export artboards tests/.data/sample-sketch.sketch
+```  
 
 Arguments:
 - `--format=<format>`: Specifies the export format (e.g., `svg`, `png`, `jpeg`).
