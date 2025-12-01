@@ -9,6 +9,8 @@ pub enum Error {
 	Custom(String),
 
 	// -- Externals
+	#[from]
+	SerdeJson(serde_json::Error),
 }
 
 // region:    --- Custom

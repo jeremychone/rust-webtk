@@ -10,5 +10,9 @@ unsafe_code = "forbid"
 [dependencies]
 # -- Cli
 clap = { version = "4", features = ["derive"] }
+# -- Json
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_with = { version = "3", features = ["macros"] }
 # -- Others
 derive_more = { version = "2", features = ["from", "display"] }
