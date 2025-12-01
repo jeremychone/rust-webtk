@@ -18,3 +18,25 @@ pub fn exec_list_artboards(sketch_file: &str, globs: Vec<String>) -> Result<()> 
 
 	Ok(())
 }
+
+pub fn exec_export(sketch_file: &str, globs: Vec<String>, formats: Vec<String>, output: &str) -> Result<()> {
+	let sketch_file = SPath::new(sketch_file);
+	let output_dir = SPath::new(output);
+
+	let glob_refs: Vec<&str> = globs.iter().map(|s| s.as_str()).collect();
+	let glob_arg = if glob_refs.is_empty() {
+		None
+	} else {
+		Some(glob_refs.as_slice())
+	};
+
+	let format_refs: Vec<&str> = formats.iter().map(|s| s.as_str()).collect();
+
+	let exported = sketch::export_artboards(&sketch_file, glob_arg, &format_refs, &output_dir)?;
+
+	for path in exported {
+		println!("Exported: {path}");
+	}
+
+	Ok(())
+}

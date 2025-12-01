@@ -28,4 +28,22 @@ pub enum SketchCommand {
 		#[arg(short, long)]
 		glob: Vec<String>,
 	},
+
+	/// Export artboards from a Sketch file
+	Export {
+		/// Path to the Sketch file
+		sketch_file: String,
+
+		/// Optional glob patterns to filter artboards by name (can be specified multiple times)
+		#[arg(short, long)]
+		glob: Vec<String>,
+
+		/// Export format(s): svg, png, jpeg (comma-delimited or multiple flags)
+		#[arg(long, value_delimiter = ',')]
+		format: Vec<String>,
+
+		/// Output directory for exported files
+		#[arg(short, long)]
+		output: String,
+	},
 }

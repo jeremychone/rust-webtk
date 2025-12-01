@@ -25,6 +25,12 @@ fn main() {
 			SketchCommand::ListArtboards { sketch_file, glob } => {
 				cli::service_sketch::exec_list_artboards(&sketch_file, glob)
 			}
+			SketchCommand::Export {
+				sketch_file,
+				glob,
+				format,
+				output,
+			} => cli::service_sketch::exec_export(&sketch_file, glob, format, &output),
 		},
 	};
 
