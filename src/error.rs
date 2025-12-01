@@ -1,12 +1,15 @@
 use derive_more::{Display, From};
+use simple_fs::SPath;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Debug, Display, From)]
-#[display("{self:?}")]
 pub enum Error {
 	#[from(String, &String, &str)]
 	Custom(String),
+
+	#[display("File not found: '{_0}'")]
+	FileNotFound(SPath),
 
 	// -- Externals
 	#[from]

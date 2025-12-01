@@ -6,25 +6,28 @@ use cli::args::{CliArgs, Command, SketchCommand};
 mod cli;
 mod error;
 mod service;
+mod support;
 
 pub use error::{Error, Result};
 
 // endregion: --- Modules
 
-fn main() -> Result<()> {
+fn main() {
 	let args = CliArgs::parse();
 
-	match args.command {
-		Some(Command::Sketch { command }) => match command {
-			SketchCommand::ListArtboards { sketch_file } => {
-				cli::service_sketch::exec_list_artboards(&sketch_file)?;
-			}
+	let Some(cmd) = args.command else {
+		println!("Hello webtk world! Use --help for available commands.");
+		return;
+	};
+
+	let res: Result<()> = match cmd {
+		Command::Sketch { command } => match command {
+			SketchCommand::ListArtboards { sketch_file } => cli::service_sketch::exec_list_artboards(&sketch_file),
 		},
+	};
 
-		None => {
-			println!("Hello webtk world! Use --help for available commands.");
-		}
+	if let Err(err) = res {
+		eprintln!("Error: {err}");
+		std::process::exit(1);
 	}
-
-	Ok(())
 }

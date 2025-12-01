@@ -1,5 +1,6 @@
 use crate::Result;
 use crate::service::sketch::Artboard;
+use crate::support::files;
 use serde::Deserialize;
 use simple_fs::SPath;
 use std::collections::HashMap;
@@ -29,6 +30,8 @@ struct SketchArtboard {
 
 pub fn list_artboards(sketch_file: impl AsRef<SPath>) -> Result<Vec<Artboard>> {
 	let sketch_file = sketch_file.as_ref();
+
+	files::check_file_exists(sketch_file)?;
 
 	let output = Command::new(SKETCHTOOL_PATH)
 		.args(["metadata", sketch_file.as_str()])
