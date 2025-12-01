@@ -22,8 +22,15 @@ webtk sketch list-artboards tests/data/sample-sketch.sketch
 
 # List all Artboards with glob
 webtk sketch list-artboards -g "ico/*" tests/data/sample-sketch.sketch 
+
+# Export all ico/ artboards
+webtk sketch export -g "ico/*" --format "svg,png" -o ".out/icons" tests/data/sample-sketch.sketch 
+
 ```
 
+- `-g` is a glob on the artboard name. For mulitple globs do `-g "ico/*" -g "logo/*`
+- `--format` is the format of the export. Can be `svg`, `png`, `jpeg`. 
+    - For multiple, either comma delimited `--format "svg,png` or multiple `--format svg --format png`
 
 ## Prerequisites
 
