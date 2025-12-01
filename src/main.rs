@@ -22,7 +22,9 @@ fn main() {
 
 	let res: Result<()> = match cmd {
 		Command::Sketch { command } => match command {
-			SketchCommand::ListArtboards { sketch_file } => cli::service_sketch::exec_list_artboards(&sketch_file),
+			SketchCommand::ListArtboards { sketch_file, glob } => {
+				cli::service_sketch::exec_list_artboards(&sketch_file, glob)
+			}
 		},
 	};
 

@@ -1,6 +1,6 @@
 use crate::Result;
 use crate::service::sketch::Artboard;
-use crate::support::files;
+use crate::support::{files, globs};
 use serde::Deserialize;
 use simple_fs::SPath;
 use std::collections::HashMap;
@@ -28,8 +28,10 @@ struct SketchArtboard {
 
 // endregion: --- Sketchtool JSON Response Types
 
-pub fn list_artboards(sketch_file: impl AsRef<SPath>) -> Result<Vec<Artboard>> {
+pub fn list_artboards(sketch_file: impl AsRef<SPath>, glob_patterns: Option<&[&str]>) -> Result<Vec<Artboard>> {
 	let sketch_file = sketch_file.as_ref();
+
+	let glob_set = globs::build_glob_set(glob_patterns)?;
 
 	files::check_file_exists(sketch_file)?;
 
@@ -52,6 +54,7 @@ pub fn list_artboards(sketch_file: impl AsRef<SPath>) -> Result<Vec<Artboard>> {
 		.into_values()
 		.flat_map(|page| page.artboards)
 		.map(|(uid, ab)| Artboard { uid, name: ab.name })
+		.filter(|ab| globs::matches_glob_set(glob_set.as_ref(), &ab.name))
 		.collect();
 
 	Ok(artboards)

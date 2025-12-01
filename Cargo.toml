@@ -12,6 +12,7 @@ unsafe_code = "forbid"
 clap = { version = "4", features = ["derive"] }
 # -- File system
 simple-fs = "0.9.0"
+globset = "0.4"
 # -- Json
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

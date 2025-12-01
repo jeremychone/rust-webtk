@@ -23,5 +23,9 @@ pub enum SketchCommand {
 	ListArtboards {
 		/// Path to the Sketch file
 		sketch_file: String,
+
+		/// Optional glob patterns to filter artboards by name (can be specified multiple times)
+		#[arg(short, long)]
+		glob: Vec<String>,
 	},
 }
