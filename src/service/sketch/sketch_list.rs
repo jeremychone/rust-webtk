@@ -1,12 +1,11 @@
-use crate::service::sketch::Artboard;
 use crate::Result;
+use crate::service::sketch::Artboard;
 use serde::Deserialize;
 use simple_fs::SPath;
 use std::collections::HashMap;
 use std::process::Command;
 
-const SKETCHTOOL_PATH: &str =
-	"/Applications/Sketch.app/Contents/Resources/sketchtool/bin/sketchtool";
+const SKETCHTOOL_PATH: &str = "/Applications/Sketch.app/Contents/Resources/sketchtool/bin/sketchtool";
 
 // region:    --- Sketchtool JSON Response Types
 
