@@ -337,35 +337,32 @@ fn export_regular_formats(
 			return Err(format!("sketchtool export failed for format '{format}': {stderr}").into());
 		}
 
-		// Parse stdout for exported file names
-		let stdout = String::from_utf8_lossy(&output.stdout);
-		for line in stdout.lines() {
-			let line = line.trim();
-			if !line.is_empty() {
-				// If single file output, move the exported file from cache to the target path
-				if let Some(ref cache) = cache_dir {
-					// sketchtool outputs "Exported filename.ext" - we need to find the actual file in the cache
-					// The file is placed in a subdirectory structure matching the artboard name path
-					let exported_path = find_exported_file_in_cache(cache, format).ok_or("Cannot find exported")?;
-					let target_path = output_path;
+		// If single file output, move the exported file from cache to the target path
+		if let Some(ref cache) = cache_dir {
+			// sketchtool outputs files in subdirectory structure matching the artboard name path
+			let exported_path = find_exported_file_in_cache(cache, format).ok_or("Cannot find exported")?;
+			let target_path = output_path;
 
-					// Ensure target parent directory exists
-					if let Some(parent) = target_path.parent() {
-						ensure_dir(parent.as_std_path())
-							.map_err(|e| format!("Failed to create parent directory '{}': {e}", parent))?;
-					}
+			// Ensure target parent directory exists
+			if let Some(parent) = target_path.parent() {
+				ensure_dir(parent.as_std_path())
+					.map_err(|e| format!("Failed to create parent directory '{}': {e}", parent))?;
+			}
 
-					// Copy the file first (more reliable across filesystems), then remove source
-					fs::copy(exported_path.as_std_path(), target_path.as_std_path())
-						.map_err(|e| format!("Failed to copy exported file to '{}': {e}", target_path))?;
+			// Copy the file first (more reliable across filesystems), then remove source
+			fs::copy(exported_path.as_std_path(), target_path.as_std_path())
+				.map_err(|e| format!("Failed to copy exported file to '{}': {e}", target_path))?;
 
-					// Clean up the cache directory (includes the source file)
-					let _ = fs::remove_dir_all(cache.as_std_path());
+			// Clean up the cache directory (includes the source file)
+			let _ = fs::remove_dir_all(cache.as_std_path());
 
-					exported_files.push(target_path.to_string());
-				} else {
-					exported_files.push(line.to_string());
-				}
+			exported_files.push(target_path.to_string());
+		} else {
+			// For multi-file output, build paths based on artboard names
+			// sketchtool exports files with paths matching artboard names (e.g., "ico/user/fill.svg")
+			for artboard in artboards {
+				let file_path = output_path.join(format!("{}.{format}", artboard.name));
+				exported_files.push(file_path.to_string());
 			}
 		}
 	}
