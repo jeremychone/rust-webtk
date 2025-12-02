@@ -21,6 +21,7 @@ target/
 # -- AIPack
 # By default, ignore all paths starting with .aipack
 .aipack
+ako-config.jsonc
 # And all .aipack package files
 *.aipack
 
