@@ -1,9 +1,8 @@
 use crate::service::sketch::list_artboards;
-use crate::support::files::{self, looks_like_file_path};
+use crate::support::files;
 use crate::support::{strings, xmls};
 use crate::{Error, Result};
 use simple_fs::{SPath, ensure_dir, read_to_string};
-use std::fs;
 use std::process::Command;
 
 const SKETCHTOOL_PATH: &str = "/Applications/Sketch.app/Contents/Resources/sketchtool/bin/sketchtool";
@@ -58,7 +57,7 @@ fn export_svg_symbols(
 	output_path: &SPath,
 ) -> Result<Vec<String>> {
 	// Determine the target file path
-	let target_file = if looks_like_file_path(output_path) {
+	let target_file = if files::looks_like_file_path(output_path) {
 		output_path.clone()
 	} else {
 		// It's a directory, use symbols.svg as filename
@@ -89,7 +88,7 @@ fn export_svg_symbols(
 
 	if !output.status.success() {
 		let stderr = String::from_utf8_lossy(&output.stderr);
-		let _ = fs::remove_dir_all(cache_dir.as_std_path());
+		let _ = files::safer_delete_dir(&cache_dir);
 		return Err(format!("sketchtool export failed for svg-symbols: {stderr}").into());
 	}
 
@@ -106,17 +105,12 @@ fn export_svg_symbols(
 
 		// Validate that the SVG content is not empty
 		if svg_content.trim().is_empty() {
-			let _ = fs::remove_dir_all(cache_dir.as_std_path());
-			return Err(Error::custom(format!(
-				"SVG file for artboard '{}' is empty: '{}'",
-				artboard.name,
-				svg_file.path()
-			)));
+			let _ = files::safer_delete_dir(&cache_dir);
 		}
 
 		let symbol = convert_svg_to_symbol(&svg_content, &symbol_id).ok_or_else(|| {
 			// Clean up before returning error
-			let _ = fs::remove_dir_all(cache_dir.as_std_path());
+			let _ = files::safer_delete_dir(&cache_dir);
 			Error::custom(format!(
 				"Failed to convert SVG to symbol for artboard '{}': invalid SVG content. File: '{}', Content length: {} bytes",
 				artboard.name,
@@ -127,7 +121,7 @@ fn export_svg_symbols(
 
 		// Validate that the symbol actually has content beyond just the opening/closing tags
 		if !symbol.contains('<') || symbol.matches('<').count() <= 2 {
-			let _ = fs::remove_dir_all(cache_dir.as_std_path());
+			let _ = files::safer_delete_dir(&cache_dir);
 			return Err(Error::custom(format!(
 				"Generated symbol for artboard '{}' appears to have no inner content. SVG file: '{}'",
 				artboard.name,
@@ -147,11 +141,11 @@ fn export_svg_symbols(
 	}
 
 	// Write the symbols file
-	fs::write(target_file.as_std_path(), symbols_content)
+	std::fs::write(target_file.as_std_path(), symbols_content)
 		.map_err(|e| format!("Failed to write symbols file '{}': {e}", target_file))?;
 
 	// Clean up cache directory
-	let _ = fs::remove_dir_all(cache_dir.as_std_path());
+	let _ = files::safer_delete_dir(&cache_dir);
 
 	Ok(vec![target_file.to_string()])
 }
@@ -347,11 +341,11 @@ fn export_regular_formats(
 			}
 
 			// Copy the file first (more reliable across filesystems), then remove source
-			fs::copy(exported_path.as_std_path(), target_path.as_std_path())
+			std::fs::copy(exported_path.as_std_path(), target_path.as_std_path())
 				.map_err(|e| format!("Failed to copy exported file to '{}': {e}", target_path))?;
 
 			// Clean up the cache directory (includes the source file)
-			let _ = fs::remove_dir_all(cache.as_std_path());
+			let _ = files::safer_delete_dir(cache);
 
 			exported_files.push(target_path.to_string());
 		} else {

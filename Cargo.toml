@@ -15,7 +15,7 @@ unsafe_code = "forbid"
 # -- Cli
 clap = { version = "4", features = ["derive"] }
 # -- File system
-simple-fs = "0.9.0"
+simple-fs = { version = "0.9.1" }
 globset = "0.4"
 # -- Json
 serde = { version = "1", features = ["derive"] }
