@@ -2,7 +2,7 @@ use crate::{Error, Result};
 use simple_fs::{SPath, SaferRemoveOptions};
 
 /// Allowed substrings for directory deletion (safety check).
-const DIR_DELETE_ALLOW_CONTAINS: &[&str] = &[".cache-symbols", ".cache"];
+const DIR_DELETE_ALLOW_CONTAINS: &[&str] = &[".cache-raw-export", ".cache-symbols", ".cache"];
 
 /// Allowed extensions for file deletion (safety check).
 const FILE_DELETE_ALLOW_CONTAINS: &[&str] = &[".svg", ".png", ".jpeg"];

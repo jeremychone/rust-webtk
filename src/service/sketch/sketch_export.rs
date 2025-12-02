@@ -7,6 +7,9 @@ use std::process::Command;
 
 const SKETCHTOOL_PATH: &str = "/Applications/Sketch.app/Contents/Resources/sketchtool/bin/sketchtool";
 
+/// Cache directory name for raw exports before processing
+const CACHE_RAW_EXPORT_DIR: &str = ".cache-raw-export";
+
 /// Exports artboards from a Sketch file to the specified formats.
 /// Returns a list of exported file paths.
 pub fn export_artboards(
@@ -14,6 +17,7 @@ pub fn export_artboards(
 	glob_patterns: Option<&[&str]>,
 	formats: &[&str],
 	output_dir: impl AsRef<SPath>,
+	flatten: bool,
 ) -> Result<Vec<String>> {
 	let sketch_file = sketch_file.as_ref();
 	let output_path = output_dir.as_ref();
@@ -43,7 +47,7 @@ pub fn export_artboards(
 
 	// Handle regular formats
 	if !regular_formats.is_empty() {
-		let regular_files = export_regular_formats(sketch_file, &artboards, &regular_formats, output_path)?;
+		let regular_files = export_regular_formats(sketch_file, &artboards, &regular_formats, output_path, flatten)?;
 		exported_files.extend(regular_files);
 	}
 
@@ -65,7 +69,10 @@ fn export_svg_symbols(
 	};
 
 	// Create a cache directory for temporary SVG exports
-	let cache_dir = target_file.parent().unwrap_or_else(|| SPath::new(".")).join(".cache-symbols");
+	let cache_dir = target_file
+		.parent()
+		.unwrap_or_else(|| SPath::new("."))
+		.join(CACHE_RAW_EXPORT_DIR);
 
 	ensure_dir(cache_dir.as_std_path())
 		.map_err(|e| format!("Failed to create cache directory '{}': {e}", cache_dir))?;
@@ -153,9 +160,15 @@ fn export_svg_symbols(
 /// Finds the SVG file corresponding to an artboard in the cache directory.
 /// The file path structure mirrors the artboard name (e.g., "ico/user/fill" -> "ico/user/fill.svg").
 fn find_svg_file_for_artboard(cache_dir: &SPath, artboard_name: &str) -> Result<simple_fs::SFile> {
+	find_svg_file_for_artboard_with_ext(cache_dir, artboard_name, "svg")
+}
+
+/// Finds a file corresponding to an artboard in the cache directory with a specific extension.
+/// The file path structure mirrors the artboard name (e.g., "ico/user/fill" -> "ico/user/fill.{ext}").
+fn find_svg_file_for_artboard_with_ext(cache_dir: &SPath, artboard_name: &str, ext: &str) -> Result<simple_fs::SFile> {
 	// sketchtool exports files preserving the artboard name path structure
-	// e.g., artboard "ico/user/fill" becomes "cache_dir/ico/user/fill.svg"
-	let expected_path = cache_dir.join(format!("{artboard_name}.svg"));
+	// e.g., artboard "ico/user/fill" becomes "cache_dir/ico/user/fill.{ext}"
+	let expected_path = cache_dir.join(format!("{artboard_name}.{ext}"));
 
 	if expected_path.exists() {
 		return simple_fs::SFile::new(expected_path.as_str()).map_err(Error::custom_from_err);
@@ -164,8 +177,10 @@ fn find_svg_file_for_artboard(cache_dir: &SPath, artboard_name: &str) -> Result<
 	// If the expected path doesn't exist, fail immediately with a clear error
 	// Don't do fuzzy matching as it leads to returning wrong files
 	Err(Error::custom(format!(
-		"SVG file not found for artboard '{}'. Expected path: '{}' does not exist.",
-		artboard_name, expected_path
+		"{} file not found for artboard '{}'. Expected path: '{}' does not exist.",
+		ext.to_uppercase(),
+		artboard_name,
+		expected_path
 	)))
 }
 
@@ -268,6 +283,7 @@ fn export_regular_formats(
 	artboards: &[crate::service::sketch::Artboard],
 	formats: &[&str],
 	output_path: &SPath,
+	flatten: bool,
 ) -> Result<Vec<String>> {
 	// Determine if output is a single file target
 	let single_file_output = is_single_file_output(output_path, formats);
@@ -291,10 +307,11 @@ fn export_regular_formats(
 	}
 
 	// Determine actual output directory (where sketchtool will write files)
-	// For single file output, use a .cache subdirectory to capture sketchtool's output
-	let (output_dir, cache_dir) = if single_file_output {
+	// For single file output or flatten mode, use a cache subdirectory to capture sketchtool's output
+	let use_cache = single_file_output || flatten;
+	let (output_dir, cache_dir) = if use_cache {
 		let parent = output_path.parent().unwrap_or_else(|| SPath::new("."));
-		let cache = parent.join(".cache");
+		let cache = parent.join(CACHE_RAW_EXPORT_DIR);
 		(cache.clone(), Some(cache))
 	} else {
 		(output_path.clone(), None)
@@ -328,28 +345,49 @@ fn export_regular_formats(
 			return Err(format!("sketchtool export failed for format '{format}': {stderr}").into());
 		}
 
-		// If single file output, move the exported file from cache to the target path
+		// If using cache (single file output or flatten mode), move files from cache to target
 		if let Some(ref cache) = cache_dir {
-			// sketchtool outputs files in subdirectory structure matching the artboard name path
-			let exported_path = find_exported_file_in_cache(cache, format).ok_or("Cannot find exported")?;
-			let target_path = output_path;
+			if single_file_output {
+				// Single file output: find and move the one exported file
+				let exported_path = find_exported_file_in_cache(cache, format).ok_or("Cannot find exported")?;
+				let target_path = output_path;
 
-			// Ensure target parent directory exists
-			if let Some(parent) = target_path.parent() {
-				ensure_dir(parent.as_std_path())
-					.map_err(|e| format!("Failed to create parent directory '{}': {e}", parent))?;
+				// Ensure target parent directory exists
+				if let Some(parent) = target_path.parent() {
+					ensure_dir(parent.as_std_path())
+						.map_err(|e| format!("Failed to create parent directory '{}': {e}", parent))?;
+				}
+
+				// Copy the file first (more reliable across filesystems), then remove source
+				std::fs::copy(exported_path.as_std_path(), target_path.as_std_path())
+					.map_err(|e| format!("Failed to copy exported file to '{}': {e}", target_path))?;
+
+				exported_files.push(target_path.to_string());
+			} else {
+				// Flatten mode: move all exported files with canonicalized names
+				for artboard in artboards {
+					let src_path = find_svg_file_for_artboard_with_ext(cache, &artboard.name, format)?;
+					let flattened_name = strings::canonicalize_name(&artboard.name);
+					let target_path = output_path.join(format!("{flattened_name}.{format}"));
+
+					// Ensure target parent directory exists
+					if let Some(parent) = target_path.parent() {
+						ensure_dir(parent.as_std_path())
+							.map_err(|e| format!("Failed to create parent directory '{}': {e}", parent))?;
+					}
+
+					// Copy the file
+					std::fs::copy(src_path.as_std_path(), target_path.as_std_path())
+						.map_err(|e| format!("Failed to copy exported file to '{}': {e}", target_path))?;
+
+					exported_files.push(target_path.to_string());
+				}
 			}
 
-			// Copy the file first (more reliable across filesystems), then remove source
-			std::fs::copy(exported_path.as_std_path(), target_path.as_std_path())
-				.map_err(|e| format!("Failed to copy exported file to '{}': {e}", target_path))?;
-
-			// Clean up the cache directory (includes the source file)
+			// Clean up the cache directory
 			let _ = files::safer_delete_dir(cache);
-
-			exported_files.push(target_path.to_string());
 		} else {
-			// For multi-file output, build paths based on artboard names
+			// For multi-file output without flatten, build paths based on artboard names
 			// sketchtool exports files with paths matching artboard names (e.g., "ico/user/fill.svg")
 			for artboard in artboards {
 				let file_path = output_path.join(format!("{}.{format}", artboard.name));

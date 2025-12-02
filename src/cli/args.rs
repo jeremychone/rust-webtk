@@ -45,5 +45,9 @@ pub enum SketchCommand {
 		/// Output directory for exported files
 		#[arg(short, long)]
 		output: String,
+
+		/// Flatten exported file names (e.g., "ico/user/fill" becomes "ico-user-fill")
+		#[arg(long)]
+		flatten: bool,
 	},
 }
