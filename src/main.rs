@@ -1,5 +1,5 @@
 use clap::Parser;
-use cli::args::{CliArgs, Command, SketchCommand};
+use cli::args::{CliArgs, Command};
 
 // region:    --- Modules
 
@@ -21,19 +21,7 @@ fn main() {
 	};
 
 	let res: Result<()> = match cmd {
-		Command::Sketch { command } => match command {
-			SketchCommand::ListArtboards { sketch_file, glob } => {
-				cli::exec_sketch::exec_list_artboards(&sketch_file, glob)
-			}
-			SketchCommand::Export {
-				sketch_file,
-				glob,
-				format,
-				output,
-				flatten,
-				keep_raw_export,
-			} => cli::exec_sketch::exec_export(&sketch_file, glob, format, &output, flatten, keep_raw_export),
-		},
+		Command::Sketch { command } => cli::exec_sketch::exec_command(command),
 	};
 
 	if let Err(err) = res {

@@ -1,8 +1,23 @@
 use crate::Result;
+use crate::cli::args::SketchCommand;
 use crate::service::sketch;
 use simple_fs::SPath;
 
-pub fn exec_list_artboards(sketch_file: &str, globs: Vec<String>) -> Result<()> {
+pub fn exec_command(command: SketchCommand) -> Result<()> {
+	match command {
+		SketchCommand::ListArtboards { sketch_file, glob } => exec_list_artboards(&sketch_file, glob),
+		SketchCommand::Export {
+			sketch_file,
+			glob,
+			format,
+			output,
+			flatten,
+			keep_raw_export,
+		} => exec_export(&sketch_file, glob, format, &output, flatten, keep_raw_export),
+	}
+}
+
+fn exec_list_artboards(sketch_file: &str, globs: Vec<String>) -> Result<()> {
 	let sketch_file = SPath::new(sketch_file);
 	let glob_refs: Vec<&str> = globs.iter().map(|s| s.as_str()).collect();
 	let glob_arg = if glob_refs.is_empty() {
@@ -19,7 +34,7 @@ pub fn exec_list_artboards(sketch_file: &str, globs: Vec<String>) -> Result<()> 
 	Ok(())
 }
 
-pub fn exec_export(
+fn exec_export(
 	sketch_file: &str,
 	globs: Vec<String>,
 	formats: Vec<String>,
