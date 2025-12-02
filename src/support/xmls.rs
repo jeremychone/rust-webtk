@@ -18,6 +18,7 @@ pub fn extract_root_inner_nodes(xml_content: &str) -> Option<Vec<XMLNode>> {
 
 /// Extracts the inner content of the root element as a string.
 /// Returns the serialized children of the root element.
+#[allow(unused)]
 pub fn extract_root_inner_content(xml_content: &str) -> Option<String> {
 	let nodes = extract_root_inner_nodes(xml_content)?;
 	Some(nodes_to_string(&nodes))

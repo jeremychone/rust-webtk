@@ -124,7 +124,7 @@ fn export_svg_symbols(
 				svg_content.len()
 			))
 		})?;
-		
+
 		// Validate that the symbol actually has content beyond just the opening/closing tags
 		if !symbol.contains('<') || symbol.matches('<').count() <= 2 {
 			let _ = fs::remove_dir_all(cache_dir.as_std_path());
@@ -134,7 +134,7 @@ fn export_svg_symbols(
 				svg_file.path()
 			)));
 		}
-		
+
 		symbols.push(symbol);
 	}
 
@@ -158,10 +158,7 @@ fn export_svg_symbols(
 
 /// Finds the SVG file corresponding to an artboard in the cache directory.
 /// The file path structure mirrors the artboard name (e.g., "ico/user/fill" -> "ico/user/fill.svg").
-fn find_svg_file_for_artboard(
-	cache_dir: &SPath,
-	artboard_name: &str,
-) -> Result<simple_fs::SFile> {
+fn find_svg_file_for_artboard(cache_dir: &SPath, artboard_name: &str) -> Result<simple_fs::SFile> {
 	// sketchtool exports files preserving the artboard name path structure
 	// e.g., artboard "ico/user/fill" becomes "cache_dir/ico/user/fill.svg"
 	let expected_path = cache_dir.join(format!("{artboard_name}.svg"));
