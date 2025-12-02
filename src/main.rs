@@ -23,7 +23,7 @@ fn main() {
 	let res: Result<()> = match cmd {
 		Command::Sketch { command } => match command {
 			SketchCommand::ListArtboards { sketch_file, glob } => {
-				cli::service_sketch::exec_list_artboards(&sketch_file, glob)
+				cli::exec_sketch::exec_list_artboards(&sketch_file, glob)
 			}
 			SketchCommand::Export {
 				sketch_file,
@@ -32,7 +32,7 @@ fn main() {
 				output,
 				flatten,
 				keep_raw_export,
-			} => cli::service_sketch::exec_export(&sketch_file, glob, format, &output, flatten, keep_raw_export),
+			} => cli::exec_sketch::exec_export(&sketch_file, glob, format, &output, flatten, keep_raw_export),
 		},
 	};
 
