@@ -1,6 +1,6 @@
 use crate::service::sketch::list_artboards;
 use crate::support::files::{self, looks_like_file_path};
-use crate::support::{strings, xmls};
+use crate::support::{strings, xmls_stream};
 use crate::{Error, Result};
 use simple_fs::{SPath, ensure_dir, read_to_string};
 use std::fs;
@@ -131,13 +131,13 @@ fn export_svg_symbols(
 /// Converts an SVG file content to a symbol element.
 fn convert_svg_to_symbol(svg_content: &str, symbol_id: &str) -> Option<String> {
 	// Extract viewBox from the SVG using quick-xml
-	let viewbox = xmls::extract_root_attribute(svg_content, "viewBox")?;
+	let viewbox = xmls_stream::extract_root_attribute(svg_content, "viewBox")?;
 
 	// Extract the inner content (everything between <svg ...> and </svg>)
-	let inner_content = xmls::extract_root_inner_content(svg_content)?;
+	let inner_content = xmls_stream::extract_root_inner_content(svg_content)?;
 
 	// Canonicalize all id attributes within the inner content using quick-xml
-	let inner_content = xmls::transform_id_attributes(&inner_content, strings::canonicalize_name);
+	let inner_content = xmls_stream::transform_id_attributes(&inner_content, strings::canonicalize_name);
 
 	// Indent the inner content for proper formatting
 	let indented_content = indent_content(&inner_content, 4);

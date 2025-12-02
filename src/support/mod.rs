@@ -3,6 +3,6 @@
 pub mod files;
 pub mod globs;
 pub mod strings;
-pub mod xmls;
+pub mod xmls_stream;
 
 // endregion: --- Modules
