@@ -38,7 +38,7 @@ pub enum SketchCommand {
 		#[arg(short, long)]
 		glob: Vec<String>,
 
-		/// Export format(s): svg, png, jpeg (comma-delimited or multiple flags)
+		/// Export format(s): svg, png, jpeg, svg-symbols (comma-delimited or multiple flags)
 		#[arg(long, value_delimiter = ',')]
 		format: Vec<String>,
 

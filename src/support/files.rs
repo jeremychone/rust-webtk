@@ -8,3 +8,9 @@ pub fn check_file_exists(path: &SPath) -> Result<()> {
 	}
 	Ok(())
 }
+
+/// Returns true if the path looks like a file path (has an extension).
+/// Returns false if it looks like a directory path (no extension).
+pub fn looks_like_file_path(path: &SPath) -> bool {
+	!path.ext().is_empty()
+}
