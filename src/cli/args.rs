@@ -49,5 +49,9 @@ pub enum SketchCommand {
 		/// Flatten exported file names (e.g., "ico/user/fill" becomes "ico-user-fill")
 		#[arg(long)]
 		flatten: bool,
+
+		/// Keep the raw export cache directory (.cache-raw-export) instead of deleting it
+		#[arg(long)]
+		keep_raw_export: bool,
 	},
 }

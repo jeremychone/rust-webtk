@@ -25,6 +25,7 @@ pub fn exec_export(
 	formats: Vec<String>,
 	output: &str,
 	flatten: bool,
+	keep_raw_export: bool,
 ) -> Result<()> {
 	let sketch_file = SPath::new(sketch_file);
 	let output_dir = SPath::new(output);
@@ -38,7 +39,8 @@ pub fn exec_export(
 
 	let format_refs: Vec<&str> = formats.iter().map(|s| s.as_str()).collect();
 
-	let exported = sketch::export_artboards(&sketch_file, glob_arg, &format_refs, &output_dir, flatten)?;
+	let exported =
+		sketch::export_artboards(&sketch_file, glob_arg, &format_refs, &output_dir, flatten, keep_raw_export)?;
 
 	for path in exported {
 		println!("Exported: {path}");

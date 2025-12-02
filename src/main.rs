@@ -31,7 +31,8 @@ fn main() {
 				format,
 				output,
 				flatten,
-			} => cli::service_sketch::exec_export(&sketch_file, glob, format, &output, flatten),
+				keep_raw_export,
+			} => cli::service_sketch::exec_export(&sketch_file, glob, format, &output, flatten, keep_raw_export),
 		},
 	};
 

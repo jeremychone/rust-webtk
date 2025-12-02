@@ -32,6 +32,9 @@ webtk sketch export -g "ico/*" --format "svg-symbols" -o ".out/icons/symbols.svg
 # Export with flattened file names (e.g., "ico/user/fill" becomes "ico-user-fill.svg")
 webtk sketch export -g "ico/*" --format svg --flatten -o ".out/icons" tests/data/sample-sketch.sketch 
 
+# Keep the raw export cache directory for debugging
+webtk sketch export -g "ico/*" --format svg --keep-raw-export -o ".out/icons" tests/data/sample-sketch.sketch 
+
 ```
 
 - `-g` is a glob on the artboard name. For mulitple globs do `-g "ico/*" -g "logo/*`
@@ -39,6 +42,7 @@ webtk sketch export -g "ico/*" --format svg --flatten -o ".out/icons" tests/data
     - For multiple, either comma delimited `--format "svg,png` or multiple `--format svg --format png`
     - `svg-symbols` exports all matched artboards as SVG `<symbol>` elements in a single SVG file
 - `--flatten` flattens the exported file names using the same algorithm as symbol IDs (e.g., "ico/user/fill" becomes "ico-user-fill.svg")
+- `--keep-raw-export` keeps the `.cache-raw-export/` directory instead of deleting it after processing (useful for debugging)
 
 ## Prerequisites
 

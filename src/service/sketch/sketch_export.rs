@@ -18,6 +18,7 @@ pub fn export_artboards(
 	formats: &[&str],
 	output_dir: impl AsRef<SPath>,
 	flatten: bool,
+	keep_raw_export: bool,
 ) -> Result<Vec<String>> {
 	let sketch_file = sketch_file.as_ref();
 	let output_path = output_dir.as_ref();
@@ -41,13 +42,14 @@ pub fn export_artboards(
 
 	// Handle svg-symbols export
 	if has_svg_symbols {
-		let symbols_files = export_svg_symbols(sketch_file, &artboards, output_path)?;
+		let symbols_files = export_svg_symbols(sketch_file, &artboards, output_path, keep_raw_export)?;
 		exported_files.extend(symbols_files);
 	}
 
 	// Handle regular formats
 	if !regular_formats.is_empty() {
-		let regular_files = export_regular_formats(sketch_file, &artboards, &regular_formats, output_path, flatten)?;
+		let regular_files =
+			export_regular_formats(sketch_file, &artboards, &regular_formats, output_path, flatten, keep_raw_export)?;
 		exported_files.extend(regular_files);
 	}
 
@@ -59,6 +61,7 @@ fn export_svg_symbols(
 	sketch_file: &SPath,
 	artboards: &[crate::service::sketch::Artboard],
 	output_path: &SPath,
+	keep_raw_export: bool,
 ) -> Result<Vec<String>> {
 	// Determine the target file path
 	let target_file = if files::looks_like_file_path(output_path) {
@@ -116,8 +119,10 @@ fn export_svg_symbols(
 		}
 
 		let symbol = convert_svg_to_symbol(&svg_content, &symbol_id).ok_or_else(|| {
-			// Clean up before returning error
-			let _ = files::safer_delete_dir(&cache_dir);
+			// Clean up before returning error (unless keep_raw_export is set)
+			if !keep_raw_export {
+				let _ = files::safer_delete_dir(&cache_dir);
+			}
 			Error::custom(format!(
 				"Failed to convert SVG to symbol for artboard '{}': invalid SVG content. File: '{}', Content length: {} bytes",
 				artboard.name,
@@ -128,7 +133,9 @@ fn export_svg_symbols(
 
 		// Validate that the symbol actually has content beyond just the opening/closing tags
 		if !symbol.contains('<') || symbol.matches('<').count() <= 2 {
-			let _ = files::safer_delete_dir(&cache_dir);
+			if !keep_raw_export {
+				let _ = files::safer_delete_dir(&cache_dir);
+			}
 			return Err(Error::custom(format!(
 				"Generated symbol for artboard '{}' appears to have no inner content. SVG file: '{}'",
 				artboard.name,
@@ -151,8 +158,10 @@ fn export_svg_symbols(
 	std::fs::write(target_file.as_std_path(), symbols_content)
 		.map_err(|e| format!("Failed to write symbols file '{}': {e}", target_file))?;
 
-	// Clean up cache directory
-	let _ = files::safer_delete_dir(&cache_dir);
+	// Clean up cache directory (unless keep_raw_export is set)
+	if !keep_raw_export {
+		let _ = files::safer_delete_dir(&cache_dir);
+	}
 
 	Ok(vec![target_file.to_string()])
 }
@@ -284,6 +293,7 @@ fn export_regular_formats(
 	formats: &[&str],
 	output_path: &SPath,
 	flatten: bool,
+	keep_raw_export: bool,
 ) -> Result<Vec<String>> {
 	// Determine if output is a single file target
 	let single_file_output = is_single_file_output(output_path, formats);
@@ -384,8 +394,10 @@ fn export_regular_formats(
 				}
 			}
 
-			// Clean up the cache directory
-			let _ = files::safer_delete_dir(cache);
+			// Clean up the cache directory (unless keep_raw_export is set)
+			if !keep_raw_export {
+				let _ = files::safer_delete_dir(cache);
+			}
 		} else {
 			// For multi-file output without flatten, build paths based on artboard names
 			// sketchtool exports files with paths matching artboard names (e.g., "ico/user/fill.svg")
