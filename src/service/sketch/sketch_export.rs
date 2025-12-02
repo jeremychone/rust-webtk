@@ -1,6 +1,6 @@
 use crate::service::sketch::list_artboards;
 use crate::support::files::{self, looks_like_file_path};
-use crate::support::{strings, xmls_stream};
+use crate::support::{strings, xmls};
 use crate::{Error, Result};
 use simple_fs::{SPath, ensure_dir, read_to_string};
 use std::fs;
@@ -93,21 +93,49 @@ fn export_svg_symbols(
 		return Err(format!("sketchtool export failed for svg-symbols: {stderr}").into());
 	}
 
-	// Collect all exported SVG files
-	let svg_files =
-		simple_fs::list_files(cache_dir.as_std_path(), Some(&["**/*.svg"]), None).map_err(Error::custom_from_err)?;
-
-	// Build symbols from exported SVGs
+	// Build symbols from exported SVGs, matching by artboard name
 	let mut symbols = Vec::new();
-	for (idx, svg_file) in svg_files.iter().enumerate() {
-		let artboard_name = &artboards[idx].name;
-		let symbol_id = strings::canonicalize_name(artboard_name);
+	for artboard in artboards {
+		let symbol_id = strings::canonicalize_name(&artboard.name);
+
+		// Find the corresponding SVG file by matching the artboard name pattern
+		// sketchtool exports files with names like "artboard-name.svg" where slashes become "/"
+		let svg_file = find_svg_file_for_artboard(&cache_dir, &artboard.name)?;
 
 		let svg_content = read_to_string(svg_file.path()).map_err(Error::custom_from_err)?;
 
-		if let Some(symbol) = convert_svg_to_symbol(&svg_content, &symbol_id) {
-			symbols.push(symbol);
+		// Validate that the SVG content is not empty
+		if svg_content.trim().is_empty() {
+			let _ = fs::remove_dir_all(cache_dir.as_std_path());
+			return Err(Error::custom(format!(
+				"SVG file for artboard '{}' is empty: '{}'",
+				artboard.name,
+				svg_file.path()
+			)));
 		}
+
+		let symbol = convert_svg_to_symbol(&svg_content, &symbol_id).ok_or_else(|| {
+			// Clean up before returning error
+			let _ = fs::remove_dir_all(cache_dir.as_std_path());
+			Error::custom(format!(
+				"Failed to convert SVG to symbol for artboard '{}': invalid SVG content. File: '{}', Content length: {} bytes",
+				artboard.name,
+				svg_file.path(),
+				svg_content.len()
+			))
+		})?;
+		
+		// Validate that the symbol actually has content beyond just the opening/closing tags
+		if !symbol.contains('<') || symbol.matches('<').count() <= 2 {
+			let _ = fs::remove_dir_all(cache_dir.as_std_path());
+			return Err(Error::custom(format!(
+				"Generated symbol for artboard '{}' appears to have no inner content. SVG file: '{}'",
+				artboard.name,
+				svg_file.path()
+			)));
+		}
+		
+		symbols.push(symbol);
 	}
 
 	// Build the combined SVG symbols file
@@ -128,19 +156,59 @@ fn export_svg_symbols(
 	Ok(vec![target_file.to_string()])
 }
 
+/// Finds the SVG file corresponding to an artboard in the cache directory.
+/// The file path structure mirrors the artboard name (e.g., "ico/user/fill" -> "ico/user/fill.svg").
+fn find_svg_file_for_artboard(
+	cache_dir: &SPath,
+	artboard_name: &str,
+) -> Result<simple_fs::SFile> {
+	// sketchtool exports files preserving the artboard name path structure
+	// e.g., artboard "ico/user/fill" becomes "cache_dir/ico/user/fill.svg"
+	let expected_path = cache_dir.join(format!("{artboard_name}.svg"));
+
+	if expected_path.exists() {
+		return simple_fs::SFile::new(expected_path.as_str()).map_err(Error::custom_from_err);
+	}
+
+	// If the expected path doesn't exist, fail immediately with a clear error
+	// Don't do fuzzy matching as it leads to returning wrong files
+	Err(Error::custom(format!(
+		"SVG file not found for artboard '{}'. Expected path: '{}' does not exist.",
+		artboard_name, expected_path
+	)))
+}
+
 /// Converts an SVG file content to a symbol element.
 fn convert_svg_to_symbol(svg_content: &str, symbol_id: &str) -> Option<String> {
-	// Extract viewBox from the SVG using quick-xml
-	let viewbox = xmls_stream::extract_root_attribute(svg_content, "viewBox")?;
+	// Extract viewBox from the SVG
+	let viewbox = xmls::extract_root_attribute(svg_content, "viewBox")?;
 
-	// Extract the inner content (everything between <svg ...> and </svg>)
-	let inner_content = xmls_stream::extract_root_inner_content(svg_content)?;
+	// Extract the inner nodes (everything between <svg ...> and </svg>)
+	let inner_nodes = xmls::extract_root_inner_nodes(svg_content)?;
 
-	// Canonicalize all id attributes within the inner content using quick-xml
-	let inner_content = xmls_stream::transform_id_attributes(&inner_content, strings::canonicalize_name);
+	// If no inner nodes, return None to signal an error
+	if inner_nodes.is_empty() {
+		return None;
+	}
+
+	// Canonicalize all id attributes within the inner nodes
+	let transformed_nodes = xmls::transform_nodes_id_attributes(inner_nodes, strings::canonicalize_name);
+
+	// Convert nodes back to string
+	let inner_content = xmls::nodes_to_string(&transformed_nodes);
+
+	// If inner content is empty after transformation, return None
+	if inner_content.trim().is_empty() {
+		return None;
+	}
 
 	// Indent the inner content for proper formatting
 	let indented_content = indent_content(&inner_content, 4);
+
+	// Final check: if indented content is empty, something went wrong
+	if indented_content.trim().is_empty() {
+		return None;
+	}
 
 	Some(format!(
 		r#"  <symbol id="{symbol_id}" viewBox="{viewbox}">
