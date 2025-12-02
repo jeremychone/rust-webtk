@@ -1,6 +1,6 @@
 use crate::service::sketch::list_artboards;
 use crate::support::files::{self, looks_like_file_path};
-use crate::support::strings;
+use crate::support::{strings, xmls};
 use crate::{Error, Result};
 use simple_fs::{SPath, ensure_dir, read_to_string};
 use std::fs;
@@ -130,123 +130,58 @@ fn export_svg_symbols(
 
 /// Converts an SVG file content to a symbol element.
 fn convert_svg_to_symbol(svg_content: &str, symbol_id: &str) -> Option<String> {
-	// Extract viewBox from the SVG
-	let viewbox = extract_svg_attribute(svg_content, "viewBox")?;
+	// Extract viewBox from the SVG using quick-xml
+	let viewbox = xmls::extract_root_attribute(svg_content, "viewBox")?;
 
 	// Extract the inner content (everything between <svg ...> and </svg>)
-	let inner_content = extract_svg_inner_content(svg_content)?;
+	let inner_content = xmls::extract_root_inner_content(svg_content)?;
 
-	// Canonicalize all id attributes within the inner content
-	let inner_content = canonicalize_svg_ids(&inner_content);
+	// Canonicalize all id attributes within the inner content using quick-xml
+	let inner_content = xmls::transform_id_attributes(&inner_content, strings::canonicalize_name);
+
+	// Indent the inner content for proper formatting
+	let indented_content = indent_content(&inner_content, 4);
 
 	Some(format!(
 		r#"  <symbol id="{symbol_id}" viewBox="{viewbox}">
-{inner_content}
+{indented_content}
   </symbol>"#
 	))
 }
 
-/// Canonicalizes all id attribute values in SVG content.
-/// Replaces special characters with dashes using the same canonicalization as symbol IDs.
-fn canonicalize_svg_ids(content: &str) -> String {
-	let mut result = String::with_capacity(content.len());
-	let mut remaining = content;
+/// Indents each line of content by the specified number of spaces.
+/// First removes common leading whitespace, then applies the new base indentation
+/// while preserving relative indentation between lines.
+fn indent_content(content: &str, base_spaces: usize) -> String {
+	if content.is_empty() {
+		return String::new();
+	}
 
-	while !remaining.is_empty() {
-		// Look for id=" or id='
-		if let Some(idx) = remaining.find("id=\"") {
-			// Copy everything before the id attribute
-			result.push_str(&remaining[..idx]);
-			result.push_str("id=\"");
-			remaining = &remaining[idx + 4..];
+	// Find the minimum indentation among non-empty lines
+	let min_indent = content
+		.lines()
+		.filter(|line| !line.trim().is_empty())
+		.map(|line| line.len() - line.trim_start().len())
+		.min()
+		.unwrap_or(0);
 
-			// Find the closing quote
-			if let Some(end_idx) = remaining.find('"') {
-				let id_value = &remaining[..end_idx];
-				let canonicalized = strings::canonicalize_name(id_value);
-				result.push_str(&canonicalized);
-				result.push('"');
-				remaining = &remaining[end_idx + 1..];
+	let base_indent = " ".repeat(base_spaces);
+	content
+		.lines()
+		.map(|line| {
+			if line.trim().is_empty() {
+				String::new()
 			} else {
-				// Malformed, just copy the rest
-				result.push_str(remaining);
-				break;
+				// Calculate this line's indentation relative to min_indent
+				let line_indent = line.len() - line.trim_start().len();
+				let relative_indent = line_indent.saturating_sub(min_indent);
+				let extra_indent = " ".repeat(relative_indent);
+				let trimmed = line.trim_start();
+				format!("{base_indent}{extra_indent}{trimmed}")
 			}
-		} else if let Some(idx) = remaining.find("id='") {
-			// Copy everything before the id attribute
-			result.push_str(&remaining[..idx]);
-			result.push_str("id='");
-			remaining = &remaining[idx + 4..];
-
-			// Find the closing quote
-			if let Some(end_idx) = remaining.find('\'') {
-				let id_value = &remaining[..end_idx];
-				let canonicalized = strings::canonicalize_name(id_value);
-				result.push_str(&canonicalized);
-				result.push('\'');
-				remaining = &remaining[end_idx + 1..];
-			} else {
-				// Malformed, just copy the rest
-				result.push_str(remaining);
-				break;
-			}
-		} else {
-			// No more id attributes, copy the rest
-			result.push_str(remaining);
-			break;
-		}
-	}
-
-	result
-}
-
-/// Extracts an attribute value from an SVG tag.
-fn extract_svg_attribute(svg_content: &str, attr_name: &str) -> Option<String> {
-	let svg_start = svg_content.find("<svg")?;
-	let svg_tag_end = svg_content[svg_start..].find('>')?;
-	let svg_tag = &svg_content[svg_start..svg_start + svg_tag_end];
-
-	// Look for attribute="value" or attribute='value'
-	let attr_pattern = format!("{attr_name}=\"");
-	if let Some(attr_start) = svg_tag.find(&attr_pattern) {
-		let value_start = attr_start + attr_pattern.len();
-		let value_end = svg_tag[value_start..].find('"')?;
-		return Some(svg_tag[value_start..value_start + value_end].to_string());
-	}
-
-	let attr_pattern = format!("{attr_name}='");
-	if let Some(attr_start) = svg_tag.find(&attr_pattern) {
-		let value_start = attr_start + attr_pattern.len();
-		let value_end = svg_tag[value_start..].find('\'')?;
-		return Some(svg_tag[value_start..value_start + value_end].to_string());
-	}
-
-	None
-}
-
-/// Extracts the inner content of an SVG element.
-fn extract_svg_inner_content(svg_content: &str) -> Option<String> {
-	let svg_start = svg_content.find("<svg")?;
-	let opening_tag_end = svg_content[svg_start..].find('>')? + svg_start + 1;
-	let closing_tag_start = svg_content.rfind("</svg>")?;
-
-	if opening_tag_end >= closing_tag_start {
-		return Some(String::new());
-	}
-
-	let inner = &svg_content[opening_tag_end..closing_tag_start];
-
-	// Trim leading/trailing whitespace to avoid empty lines at start/end
-	let inner = inner.trim();
-
-	if inner.is_empty() {
-		return Some(String::new());
-	}
-
-	// Indent the inner content
-	let indented: Vec<String> = inner.lines().map(|line| format!("    {line}")).collect();
-
-	Some(indented.join("\n"))
+		})
+		.collect::<Vec<_>>()
+		.join("\n")
 }
 
 /// Builds the combined SVG symbols file.
