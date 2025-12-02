@@ -2,6 +2,10 @@
 name = "webtk"
 version = "0.1.0"
 edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "Web asset toolkit utility to transpile, generate, and mix web assets."
+homepage = "https://github.com/jeremychone/rust-webtk"
+repository = "https://github.com/jeremychone/rust-webtk"
 
 [lints.rust]
 unsafe_code = "forbid"
