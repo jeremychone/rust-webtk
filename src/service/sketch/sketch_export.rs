@@ -48,8 +48,14 @@ pub fn export_artboards(
 
 	// Handle regular formats
 	if !regular_formats.is_empty() {
-		let regular_files =
-			export_regular_formats(sketch_file, &artboards, &regular_formats, output_path, flatten, keep_raw_export)?;
+		let regular_files = export_regular_formats(
+			sketch_file,
+			&artboards,
+			&regular_formats,
+			output_path,
+			flatten,
+			keep_raw_export,
+		)?;
 		exported_files.extend(regular_files);
 	}
 

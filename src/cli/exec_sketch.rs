@@ -54,8 +54,14 @@ fn exec_export(
 
 	let format_refs: Vec<&str> = formats.iter().map(|s| s.as_str()).collect();
 
-	let exported =
-		sketch::export_artboards(&sketch_file, glob_arg, &format_refs, &output_dir, flatten, keep_raw_export)?;
+	let exported = sketch::export_artboards(
+		&sketch_file,
+		glob_arg,
+		&format_refs,
+		&output_dir,
+		flatten,
+		keep_raw_export,
+	)?;
 
 	for path in exported {
 		println!("Exported: {path}");
