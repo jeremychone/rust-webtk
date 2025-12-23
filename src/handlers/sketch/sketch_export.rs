@@ -1,6 +1,5 @@
-use crate::service::sketch::list_artboards;
-use crate::support::files;
-use crate::support::{strings, xmls};
+use crate::handlers::sketch::{Artboard, list_artboards};
+use crate::support::{files, strings, xmls};
 use crate::{Error, Result};
 use simple_fs::{SPath, ensure_dir, read_to_string};
 use std::process::Command;
@@ -48,14 +47,8 @@ pub fn export_artboards(
 
 	// Handle regular formats
 	if !regular_formats.is_empty() {
-		let regular_files = export_regular_formats(
-			sketch_file,
-			&artboards,
-			&regular_formats,
-			output_path,
-			flatten,
-			keep_raw_export,
-		)?;
+		let regular_files =
+			export_regular_formats(sketch_file, &artboards, &regular_formats, output_path, flatten, keep_raw_export)?;
 		exported_files.extend(regular_files);
 	}
 
@@ -65,7 +58,7 @@ pub fn export_artboards(
 /// Exports artboards as SVG symbols into a single SVG file.
 fn export_svg_symbols(
 	sketch_file: &SPath,
-	artboards: &[crate::service::sketch::Artboard],
+	artboards: &[Artboard],
 	output_path: &SPath,
 	keep_raw_export: bool,
 ) -> Result<Vec<String>> {
@@ -295,7 +288,7 @@ fn build_svg_symbols_file(symbols: &[String]) -> String {
 /// Exports artboards using regular sketchtool formats (svg, png, jpeg).
 fn export_regular_formats(
 	sketch_file: &SPath,
-	artboards: &[crate::service::sketch::Artboard],
+	artboards: &[Artboard],
 	formats: &[&str],
 	output_path: &SPath,
 	flatten: bool,

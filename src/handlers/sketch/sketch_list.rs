@@ -1,5 +1,5 @@
 use crate::Result;
-use crate::service::sketch::Artboard;
+use crate::handlers::sketch::Artboard;
 use crate::support::{files, globs};
 use serde::Deserialize;
 use simple_fs::SPath;
