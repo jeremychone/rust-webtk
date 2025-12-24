@@ -11,8 +11,8 @@ use_small_heuristics = "Max"
 
 ## Unstable (nightly component rustfmt needed)
 imports_granularity = "Module"
-
-
+group_imports = "One"
 
 # rustup toolchain install nightly
 # rustup component add rustfmt --toolchain nightly
+# cargo +nightly fmt
