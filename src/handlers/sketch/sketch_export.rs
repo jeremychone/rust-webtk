@@ -167,19 +167,19 @@ fn export_svg_symbols(
 
 /// Finds the SVG file corresponding to an artboard in the cache directory.
 /// The file path structure mirrors the artboard name (e.g., "ico/user/fill" -> "ico/user/fill.svg").
-fn find_svg_file_for_artboard(cache_dir: &SPath, artboard_name: &str) -> Result<simple_fs::SFile> {
+fn find_svg_file_for_artboard(cache_dir: &SPath, artboard_name: &str) -> Result<SPath> {
 	find_svg_file_for_artboard_with_ext(cache_dir, artboard_name, "svg")
 }
 
 /// Finds a file corresponding to an artboard in the cache directory with a specific extension.
 /// The file path structure mirrors the artboard name (e.g., "ico/user/fill" -> "ico/user/fill.{ext}").
-fn find_svg_file_for_artboard_with_ext(cache_dir: &SPath, artboard_name: &str, ext: &str) -> Result<simple_fs::SFile> {
+fn find_svg_file_for_artboard_with_ext(cache_dir: &SPath, artboard_name: &str, ext: &str) -> Result<SPath> {
 	// sketchtool exports files preserving the artboard name path structure
 	// e.g., artboard "ico/user/fill" becomes "cache_dir/ico/user/fill.{ext}"
 	let expected_path = cache_dir.join(format!("{artboard_name}.{ext}"));
 
 	if expected_path.exists() {
-		return simple_fs::SFile::new(expected_path.as_str()).map_err(Error::custom_from_err);
+		return Ok(expected_path);
 	}
 
 	// If the expected path doesn't exist, fail immediately with a clear error
@@ -414,7 +414,7 @@ fn export_regular_formats(
 fn find_exported_file_in_cache(cache_dir: &SPath, format: &str) -> Option<SPath> {
 	let pattern = format!("**/*.{format}");
 	let files = simple_fs::list_files(cache_dir.as_std_path(), Some(&[pattern.as_str()]), None).ok()?;
-	files.into_iter().next().map(|f| f.path().clone())
+	files.into_iter().next()
 }
 
 /// Checks if the output path appears to be a single file target.
