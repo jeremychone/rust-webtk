@@ -59,6 +59,10 @@ pub struct ExportArgs {
 	/// Keep the raw export cache directory (.cache-raw-export) instead of deleting it
 	#[arg(long)]
 	pub keep_raw_export: bool,
+
+	/// Strip fill and stroke colors from generated SVG symbols so they can be styled with CSS
+	#[arg(long)]
+	pub clear_styles: bool,
 }
 
 // endregion: --- Sketch

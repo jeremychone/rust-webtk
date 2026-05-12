@@ -7,7 +7,15 @@ pub fn exec_command(command: SketchCommand) -> Result<()> {
 	match command {
 		SketchCommand::ListArtboards(args) => exec_list_artboards(&args.sketch_file, args.glob),
 		SketchCommand::Export(args) => {
-			exec_export(&args.sketch_file, args.glob, args.format, &args.output, args.flatten, args.keep_raw_export)
+			exec_export(
+				&args.sketch_file,
+				args.glob,
+				args.format,
+				&args.output,
+				args.flatten,
+				args.keep_raw_export,
+				args.clear_styles,
+			)
 		}
 	}
 }
@@ -32,6 +40,7 @@ fn exec_export(
 	output: &str,
 	flatten: bool,
 	keep_raw_export: bool,
+	clear_styles: bool,
 ) -> Result<()> {
 	let sketch_file = SPath::new(sketch_file);
 	let output_dir = SPath::new(output);
@@ -42,7 +51,7 @@ fn exec_export(
 	let format_refs: Vec<&str> = formats.iter().map(|s| s.as_str()).collect();
 
 	let exported =
-		sketch::export_artboards(&sketch_file, glob_arg, &format_refs, &output_dir, flatten, keep_raw_export)?;
+		sketch::export_artboards(&sketch_file, glob_arg, &format_refs, &output_dir, flatten, keep_raw_export, clear_styles)?;
 
 	for path in exported {
 		println!("Exported: {path}");

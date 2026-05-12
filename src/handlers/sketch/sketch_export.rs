@@ -18,6 +18,7 @@ pub fn export_artboards(
 	output_dir: impl AsRef<SPath>,
 	flatten: bool,
 	keep_raw_export: bool,
+	clear_styles: bool,
 ) -> Result<Vec<String>> {
 	let sketch_file = sketch_file.as_ref();
 	let output_path = output_dir.as_ref();
@@ -41,7 +42,7 @@ pub fn export_artboards(
 
 	// Handle svg-symbols export
 	if has_svg_symbols {
-		let symbols_files = export_svg_symbols(sketch_file, &artboards, output_path, keep_raw_export)?;
+		let symbols_files = export_svg_symbols(sketch_file, &artboards, output_path, keep_raw_export, clear_styles)?;
 		exported_files.extend(symbols_files);
 	}
 
@@ -61,6 +62,7 @@ fn export_svg_symbols(
 	artboards: &[Artboard],
 	output_path: &SPath,
 	keep_raw_export: bool,
+	clear_styles: bool,
 ) -> Result<Vec<String>> {
 	// Determine the target file path
 	let target_file = if files::looks_like_file_path(output_path) {
@@ -117,7 +119,7 @@ fn export_svg_symbols(
 			let _ = files::safer_delete_dir(&cache_dir);
 		}
 
-		let symbol = convert_svg_to_symbol(&svg_content, &symbol_id).ok_or_else(|| {
+		let symbol = convert_svg_to_symbol(&svg_content, &symbol_id, clear_styles).ok_or_else(|| {
 			// Clean up before returning error (unless keep_raw_export is set)
 			if !keep_raw_export {
 				let _ = files::safer_delete_dir(&cache_dir);
@@ -193,7 +195,7 @@ fn find_svg_file_for_artboard_with_ext(cache_dir: &SPath, artboard_name: &str, e
 }
 
 /// Converts an SVG file content to a symbol element.
-fn convert_svg_to_symbol(svg_content: &str, symbol_id: &str) -> Option<String> {
+fn convert_svg_to_symbol(svg_content: &str, symbol_id: &str, _clear_styles: bool) -> Option<String> {
 	// Extract viewBox from the SVG
 	let viewbox = xmls::extract_root_attribute(svg_content, "viewBox")?;
 
