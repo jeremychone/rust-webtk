@@ -63,6 +63,10 @@ pub struct ExportArgs {
 	/// Strip fill and stroke colors from generated SVG symbols so they can be styled with CSS
 	#[arg(long)]
 	pub clear_styles: bool,
+
+	/// Watch the Sketch file and re-run export when it changes
+	#[arg(short = 'w', long)]
+	pub watch: bool,
 }
 
 // endregion: --- Sketch

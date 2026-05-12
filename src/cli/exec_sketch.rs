@@ -6,18 +6,16 @@ use simple_fs::SPath;
 pub fn exec_command(command: SketchCommand) -> Result<()> {
 	match command {
 		SketchCommand::ListArtboards(args) => exec_list_artboards(&args.sketch_file, args.glob),
-		SketchCommand::Export(args) => {
-			exec_export(
-				&args.sketch_file,
-				args.glob,
-				args.format,
-				&args.output,
-				args.flatten,
-				args.keep_raw_export,
-				args.clear_styles,
-				args.watch,
-			)
-		}
+		SketchCommand::Export(args) => exec_export(
+			&args.sketch_file,
+			args.glob,
+			args.format,
+			&args.output,
+			args.flatten,
+			args.keep_raw_export,
+			args.clear_styles,
+			args.watch,
+		),
 	}
 }
 
@@ -68,8 +66,15 @@ fn run_export(
 	keep_raw_export: bool,
 	clear_styles: bool,
 ) -> Result<()> {
-	let exported =
-		sketch::export_artboards(sketch_file, glob_patterns, formats, output_dir, flatten, keep_raw_export, clear_styles)?;
+	let exported = sketch::export_artboards(
+		sketch_file,
+		glob_patterns,
+		formats,
+		output_dir,
+		flatten,
+		keep_raw_export,
+		clear_styles,
+	)?;
 
 	for path in exported {
 		println!("Exported: {path}");
@@ -89,7 +94,9 @@ fn watch_export(
 ) -> Result<()> {
 	println!("Watching: {sketch_file}");
 
-	if let Err(err) = run_export(sketch_file, glob_patterns, formats, output_dir, flatten, keep_raw_export, clear_styles) {
+	if let Err(err) =
+		run_export(sketch_file, glob_patterns, formats, output_dir, flatten, keep_raw_export, clear_styles)
+	{
 		eprintln!("Export failed: {err}");
 	}
 
@@ -107,7 +114,9 @@ fn watch_export(
 
 		println!("Sketch file changed, exporting...");
 
-		if let Err(err) = run_export(sketch_file, glob_patterns, formats, output_dir, flatten, keep_raw_export, clear_styles) {
+		if let Err(err) =
+			run_export(sketch_file, glob_patterns, formats, output_dir, flatten, keep_raw_export, clear_styles)
+		{
 			eprintln!("Export failed: {err}");
 		}
 	}
