@@ -39,6 +39,18 @@ where
 	nodes
 }
 
+/// Removes concrete fill and stroke paint values from a list of XMLNodes.
+/// Preserves structural paint values such as none, currentColor, and url(...).
+pub fn clear_nodes_paint_styles(nodes: Vec<XMLNode>) -> Vec<XMLNode> {
+	let mut nodes = nodes;
+	for node in &mut nodes {
+		if let Some(elem) = node.as_mut_element() {
+			clear_element_paint_styles_recursive(elem);
+		}
+	}
+	nodes
+}
+
 /// Converts a list of XMLNodes to a string.
 pub fn nodes_to_string(nodes: &[XMLNode]) -> String {
 	if nodes.is_empty() {
@@ -75,6 +87,97 @@ where
 			transform_element_ids_recursive(child_elem, transform_fn);
 		}
 	}
+}
+
+/// Recursively removes concrete paint styles in an element and its children.
+fn clear_element_paint_styles_recursive(element: &mut Element) {
+	clear_element_paint_attributes(element);
+	clear_element_inline_paint_styles(element);
+
+	for child in &mut element.children {
+		if let Some(child_elem) = child.as_mut_element() {
+			clear_element_paint_styles_recursive(child_elem);
+		}
+	}
+}
+
+fn clear_element_paint_attributes(element: &mut Element) {
+	for attr_name in ["fill", "stroke"] {
+		let should_remove = element
+			.attributes
+			.get(attr_name)
+			.map(|value| should_remove_paint_value(value))
+			.unwrap_or(false);
+
+		if should_remove {
+			element.attributes.remove(attr_name);
+		}
+	}
+}
+
+fn clear_element_inline_paint_styles(element: &mut Element) {
+	let Some(style_value) = element.attributes.get("style").cloned() else {
+		return;
+	};
+
+	if let Some(cleaned_style) = clean_inline_paint_style(&style_value) {
+		element.attributes.insert("style".to_string(), cleaned_style);
+	} else {
+		element.attributes.remove("style");
+	}
+}
+
+fn clean_inline_paint_style(style_value: &str) -> Option<String> {
+	let declarations = style_value
+		.split(';')
+		.filter_map(clean_inline_style_declaration)
+		.collect::<Vec<_>>();
+
+	if declarations.is_empty() {
+		None
+	} else {
+		Some(declarations.join("; "))
+	}
+}
+
+fn clean_inline_style_declaration(declaration: &str) -> Option<String> {
+	let declaration = declaration.trim();
+	if declaration.is_empty() {
+		return None;
+	}
+
+	let Some((name, value)) = declaration.split_once(':') else {
+		return Some(declaration.to_string());
+	};
+
+	let name = name.trim();
+	if is_paint_style_name(name) && should_remove_paint_value(value) {
+		return None;
+	}
+
+	Some(declaration.to_string())
+}
+
+fn is_paint_style_name(name: &str) -> bool {
+	name.eq_ignore_ascii_case("fill") || name.eq_ignore_ascii_case("stroke")
+}
+
+fn should_remove_paint_value(value: &str) -> bool {
+	let value = value.trim();
+
+	if value.eq_ignore_ascii_case("none") {
+		return false;
+	}
+
+	if value.eq_ignore_ascii_case("currentColor") {
+		return false;
+	}
+
+	if value.to_ascii_lowercase().starts_with("url(") {
+		return false;
+	}
+
+	true
 }
 
 /// Converts an XMLNode to a string.
