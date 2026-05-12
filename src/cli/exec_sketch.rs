@@ -6,16 +6,7 @@ use simple_fs::SPath;
 pub fn exec_command(command: SketchCommand) -> Result<()> {
 	match command {
 		SketchCommand::ListArtboards(args) => exec_list_artboards(&args.sketch_file, args.glob),
-		SketchCommand::Export(args) => exec_export(
-			&args.sketch_file,
-			args.glob,
-			args.format,
-			&args.output,
-			args.flatten,
-			args.keep_raw_export,
-			args.clear_styles,
-			args.watch,
-		),
+		SketchCommand::Export(args) => exec_export(args),
 	}
 }
 
@@ -32,28 +23,35 @@ fn exec_list_artboards(sketch_file: &str, globs: Vec<String>) -> Result<()> {
 	Ok(())
 }
 
-fn exec_export(
-	sketch_file: &str,
-	globs: Vec<String>,
-	formats: Vec<String>,
-	output: &str,
-	flatten: bool,
-	keep_raw_export: bool,
-	clear_styles: bool,
-	watch: bool,
-) -> Result<()> {
-	let sketch_file = SPath::new(sketch_file);
-	let output_dir = SPath::new(output);
+fn exec_export(args: crate::cli::cmd::ExportArgs) -> Result<()> {
+	let sketch_file = SPath::new(&args.sketch_file);
+	let output_dir = SPath::new(&args.output);
 
-	let glob_refs: Vec<&str> = globs.iter().map(|s| s.as_str()).collect();
+	let glob_refs: Vec<&str> = args.glob.iter().map(|s| s.as_str()).collect();
 	let glob_arg = if glob_refs.is_empty() { None } else { Some(glob_refs.as_slice()) };
 
-	let format_refs: Vec<&str> = formats.iter().map(|s| s.as_str()).collect();
+	let format_refs: Vec<&str> = args.format.iter().map(|s| s.as_str()).collect();
 
-	if watch {
-		watch_export(&sketch_file, glob_arg, &format_refs, &output_dir, flatten, keep_raw_export, clear_styles)
+	if args.watch {
+		watch_export(
+			&sketch_file,
+			glob_arg,
+			&format_refs,
+			&output_dir,
+			args.flatten,
+			args.keep_raw_export,
+			args.clear_styles,
+		)
 	} else {
-		run_export(&sketch_file, glob_arg, &format_refs, &output_dir, flatten, keep_raw_export, clear_styles)
+		run_export(
+			&sketch_file,
+			glob_arg,
+			&format_refs,
+			&output_dir,
+			args.flatten,
+			args.keep_raw_export,
+			args.clear_styles,
+		)
 	}
 }
 
