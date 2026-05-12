@@ -29,6 +29,9 @@ webtk sketch export -g "ico/*" --format "svg,png" -o ".out/icons" tests/data/sam
 # Export as SVG symbols (all icons combined into one SVG with <symbol> elements)
 webtk sketch export -g "ico/*" --format "svg-symbols" -o ".out/icons/symbols.svg" tests/data/sample-sketch.sketch 
 
+# Export SVG symbols with concrete fill and stroke colors stripped for CSS styling
+webtk sketch export -g "ico/*" --format "svg-symbols" --clear-styles -o ".out/icons/symbols.svg" tests/data/sample-sketch.sketch 
+
 # Export with flattened file names (e.g., "ico/user/fill" becomes "ico-user-fill.svg")
 webtk sketch export -g "ico/*" --format svg --flatten -o ".out/icons" tests/data/sample-sketch.sketch 
 
@@ -43,6 +46,7 @@ webtk sketch export -g "ico/*" --format svg --keep-raw-export -o ".out/icons" te
     - `svg-symbols` exports all matched artboards as SVG `<symbol>` elements in a single SVG file
 - `--flatten` flattens the exported file names using the same algorithm as symbol IDs (e.g., "ico/user/fill" becomes "ico-user-fill.svg")
 - `--keep-raw-export` keeps the `.cache-raw-export/` directory instead of deleting it after processing (useful for debugging)
+- `--clear-styles` strips concrete `fill` and `stroke` paint values from generated `svg-symbols` content so symbols can be styled with CSS. It preserves structural paint values such as `none`, `currentColor`, and `url(...)`. Regular `svg`, `png`, and `jpeg` exports are unchanged.
 
 ## Prerequisites
 
