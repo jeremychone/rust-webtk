@@ -276,7 +276,7 @@ fn indent_content(content: &str, base_spaces: usize) -> String {
 /// Builds the combined SVG symbols file.
 fn build_svg_symbols_file(symbols: &[String]) -> String {
 	let mut result = String::new();
-	result.push_str(r#"<svg width="0" height="0" style="position:absolute">"#);
+	result.push_str(r#"<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute">"#);
 	result.push('\n');
 
 	for (idx, symbol) in symbols.iter().enumerate() {
@@ -482,7 +482,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_sketch_export_convert_svg_to_symbol_clear_styles_preserves_none_paint() -> Result<()> {
+	fn test_sketch_export_convert_svg_to_symbol_clear_styles_removes_none_paint() -> Result<()> {
 		// -- Setup & Fixtures
 		let svg = r#"<svg viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0"/></svg>"#;
 
@@ -490,8 +490,8 @@ mod tests {
 		let symbol = convert_svg_to_symbol(svg, "ico-user-fill", true).ok_or("Should convert SVG to symbol")?;
 
 		// -- Check
-		assert!(symbol.contains(r#"fill="none""#));
-		assert!(symbol.contains(r#"stroke="none""#));
+		assert!(!symbol.contains(r#"fill="none""#));
+		assert!(!symbol.contains(r#"stroke="none""#));
 		assert!(symbol.contains(r#"d="M0 0""#));
 
 		Ok(())
@@ -526,6 +526,23 @@ mod tests {
 		assert!(symbol.starts_with(r#"  <symbol id="ico-chevron-down" viewBox="0 0 16 16">"#));
 		assert!(symbol.contains(r#"d="M0 0""#));
 		assert!(symbol.ends_with("  </symbol>"));
+
+		Ok(())
+	}
+
+	#[test]
+	fn test_sketch_export_build_svg_symbols_file_includes_svg_namespace() -> Result<()> {
+		// -- Setup & Fixtures
+		let symbols = vec![r#"  <symbol id="ico-chevron-down" viewBox="0 0 16 16">
+    <path d="M0 0" />
+  </symbol>"#
+			.to_string()];
+
+		// -- Exec
+		let content = build_svg_symbols_file(&symbols);
+
+		// -- Check
+		assert!(content.starts_with(r#"<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute">"#));
 
 		Ok(())
 	}

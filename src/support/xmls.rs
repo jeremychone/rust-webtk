@@ -162,21 +162,7 @@ fn is_paint_style_name(name: &str) -> bool {
 	name.eq_ignore_ascii_case("fill") || name.eq_ignore_ascii_case("stroke")
 }
 
-fn should_remove_paint_value(value: &str) -> bool {
-	let value = value.trim();
-
-	if value.eq_ignore_ascii_case("none") {
-		return false;
-	}
-
-	if value.eq_ignore_ascii_case("currentColor") {
-		return false;
-	}
-
-	if value.to_ascii_lowercase().starts_with("url(") {
-		return false;
-	}
-
+fn should_remove_paint_value(_value: &str) -> bool {
 	true
 }
 
@@ -344,7 +330,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_support_xmls_clear_nodes_paint_styles_preserves_fill_none() -> Result<()> {
+	fn test_support_xmls_clear_nodes_paint_styles_removes_fill_none() -> Result<()> {
 		// -- Setup & Fixtures
 		let xml = r##"<svg><path fill="none" d="M0 0"/></svg>"##;
 
@@ -352,7 +338,7 @@ mod tests {
 		let result = clean_svg_inner_content(xml)?;
 
 		// -- Check
-		assert!(result.contains(r#"fill="none""#));
+		assert!(!result.contains(r#"fill="none""#));
 		assert!(result.contains(r#"d="M0 0""#));
 
 		Ok(())
@@ -375,7 +361,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_support_xmls_clear_nodes_paint_styles_preserves_stroke_none() -> Result<()> {
+	fn test_support_xmls_clear_nodes_paint_styles_removes_stroke_none() -> Result<()> {
 		// -- Setup & Fixtures
 		let xml = r##"<svg><path stroke="none" d="M0 0"/></svg>"##;
 
@@ -383,14 +369,14 @@ mod tests {
 		let result = clean_svg_inner_content(xml)?;
 
 		// -- Check
-		assert!(result.contains(r#"stroke="none""#));
+		assert!(!result.contains(r#"stroke="none""#));
 		assert!(result.contains(r#"d="M0 0""#));
 
 		Ok(())
 	}
 
 	#[test]
-	fn test_support_xmls_clear_nodes_paint_styles_preserves_current_color() -> Result<()> {
+	fn test_support_xmls_clear_nodes_paint_styles_removes_current_color() -> Result<()> {
 		// -- Setup & Fixtures
 		let xml = r##"<svg><path fill="currentColor" stroke="currentColor" d="M0 0"/></svg>"##;
 
@@ -398,14 +384,14 @@ mod tests {
 		let result = clean_svg_inner_content(xml)?;
 
 		// -- Check
-		assert!(result.contains(r#"fill="currentColor""#));
-		assert!(result.contains(r#"stroke="currentColor""#));
+		assert!(!result.contains(r#"fill="currentColor""#));
+		assert!(!result.contains(r#"stroke="currentColor""#));
 
 		Ok(())
 	}
 
 	#[test]
-	fn test_support_xmls_clear_nodes_paint_styles_preserves_url_paint_values() -> Result<()> {
+	fn test_support_xmls_clear_nodes_paint_styles_removes_url_paint_values() -> Result<()> {
 		// -- Setup & Fixtures
 		let xml = r##"<svg><path fill="url(#gradient)" stroke="url(#pattern)" d="M0 0"/></svg>"##;
 
@@ -413,8 +399,8 @@ mod tests {
 		let result = clean_svg_inner_content(xml)?;
 
 		// -- Check
-		assert!(result.contains(r#"fill="url(#gradient)""#));
-		assert!(result.contains(r#"stroke="url(#pattern)""#));
+		assert!(!result.contains(r#"fill="url(#gradient)""#));
+		assert!(!result.contains(r#"stroke="url(#pattern)""#));
 
 		Ok(())
 	}
@@ -487,7 +473,7 @@ mod tests {
 		assert!(result.contains("circle"));
 		assert!(!result.contains(r##"fill="#111""##));
 		assert!(!result.contains(r##"stroke="#222""##));
-		assert!(result.contains(r#"fill="none""#));
+		assert!(!result.contains(r#"fill="none""#));
 
 		Ok(())
 	}
