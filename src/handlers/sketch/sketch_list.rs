@@ -49,13 +49,15 @@ pub fn list_artboards(sketch_file: impl AsRef<SPath>, glob_patterns: Option<&[&s
 	let response: SketchMetadataResponse =
 		serde_json::from_str(&stdout).map_err(|e| format!("Failed to parse sketchtool output: {e}"))?;
 
-	let artboards = response
+	let mut artboards: Vec<_> = response
 		.pages_and_artboards
 		.into_values()
 		.flat_map(|page| page.artboards)
 		.map(|(uid, ab)| Artboard { uid, name: ab.name })
 		.filter(|ab| globs::matches_glob_set(glob_set.as_ref(), &ab.name))
 		.collect();
+
+	artboards.sort_by(|a, b| a.name.cmp(&b.name));
 
 	Ok(artboards)
 }
