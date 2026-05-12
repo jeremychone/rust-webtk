@@ -195,7 +195,7 @@ fn find_svg_file_for_artboard_with_ext(cache_dir: &SPath, artboard_name: &str, e
 }
 
 /// Converts an SVG file content to a symbol element.
-fn convert_svg_to_symbol(svg_content: &str, symbol_id: &str, _clear_styles: bool) -> Option<String> {
+fn convert_svg_to_symbol(svg_content: &str, symbol_id: &str, clear_styles: bool) -> Option<String> {
 	// Extract viewBox from the SVG
 	let viewbox = xmls::extract_root_attribute(svg_content, "viewBox")?;
 
@@ -209,6 +209,11 @@ fn convert_svg_to_symbol(svg_content: &str, symbol_id: &str, _clear_styles: bool
 
 	// Canonicalize all id attributes within the inner nodes
 	let transformed_nodes = xmls::transform_nodes_id_attributes(inner_nodes, strings::canonicalize_name);
+	let transformed_nodes = if clear_styles {
+		xmls::clear_nodes_paint_styles(transformed_nodes)
+	} else {
+		transformed_nodes
+	};
 
 	// Convert nodes back to string
 	let inner_content = xmls::nodes_to_string(&transformed_nodes);
