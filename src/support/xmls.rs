@@ -326,6 +326,177 @@ mod tests {
 
 		Ok(())
 	}
+
+	#[test]
+	fn test_support_xmls_clear_nodes_paint_styles_removes_concrete_fill() -> Result<()> {
+		// -- Setup & Fixtures
+		let xml = r##"<svg><path fill="#CECECE" d="M0 0"/></svg>"##;
+
+		// -- Exec
+		let result = clean_svg_inner_content(xml)?;
+
+		// -- Check
+		assert!(result.contains("path"));
+		assert!(result.contains(r#"d="M0 0""#));
+		assert!(!result.contains(r##"fill="#CECECE""##));
+
+		Ok(())
+	}
+
+	#[test]
+	fn test_support_xmls_clear_nodes_paint_styles_preserves_fill_none() -> Result<()> {
+		// -- Setup & Fixtures
+		let xml = r##"<svg><path fill="none" d="M0 0"/></svg>"##;
+
+		// -- Exec
+		let result = clean_svg_inner_content(xml)?;
+
+		// -- Check
+		assert!(result.contains(r#"fill="none""#));
+		assert!(result.contains(r#"d="M0 0""#));
+
+		Ok(())
+	}
+
+	#[test]
+	fn test_support_xmls_clear_nodes_paint_styles_removes_concrete_stroke() -> Result<()> {
+		// -- Setup & Fixtures
+		let xml = r##"<svg><path stroke="#123456" d="M0 0"/></svg>"##;
+
+		// -- Exec
+		let result = clean_svg_inner_content(xml)?;
+
+		// -- Check
+		assert!(result.contains("path"));
+		assert!(result.contains(r#"d="M0 0""#));
+		assert!(!result.contains(r##"stroke="#123456""##));
+
+		Ok(())
+	}
+
+	#[test]
+	fn test_support_xmls_clear_nodes_paint_styles_preserves_stroke_none() -> Result<()> {
+		// -- Setup & Fixtures
+		let xml = r##"<svg><path stroke="none" d="M0 0"/></svg>"##;
+
+		// -- Exec
+		let result = clean_svg_inner_content(xml)?;
+
+		// -- Check
+		assert!(result.contains(r#"stroke="none""#));
+		assert!(result.contains(r#"d="M0 0""#));
+
+		Ok(())
+	}
+
+	#[test]
+	fn test_support_xmls_clear_nodes_paint_styles_preserves_current_color() -> Result<()> {
+		// -- Setup & Fixtures
+		let xml = r##"<svg><path fill="currentColor" stroke="currentColor" d="M0 0"/></svg>"##;
+
+		// -- Exec
+		let result = clean_svg_inner_content(xml)?;
+
+		// -- Check
+		assert!(result.contains(r#"fill="currentColor""#));
+		assert!(result.contains(r#"stroke="currentColor""#));
+
+		Ok(())
+	}
+
+	#[test]
+	fn test_support_xmls_clear_nodes_paint_styles_preserves_url_paint_values() -> Result<()> {
+		// -- Setup & Fixtures
+		let xml = r##"<svg><path fill="url(#gradient)" stroke="url(#pattern)" d="M0 0"/></svg>"##;
+
+		// -- Exec
+		let result = clean_svg_inner_content(xml)?;
+
+		// -- Check
+		assert!(result.contains(r#"fill="url(#gradient)""#));
+		assert!(result.contains(r#"stroke="url(#pattern)""#));
+
+		Ok(())
+	}
+
+	#[test]
+	fn test_support_xmls_clear_nodes_paint_styles_preserves_unrelated_svg_attributes() -> Result<()> {
+		// -- Setup & Fixtures
+		let xml = r##"<svg><path fill="#fff" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="bevel" stroke-width="2" clip-rule="evenodd" opacity=".5" transform="translate(1 2)" d="M0 0"/></svg>"##;
+
+		// -- Exec
+		let result = clean_svg_inner_content(xml)?;
+
+		// -- Check
+		assert!(!result.contains(r##"fill="#fff""##));
+		assert!(result.contains(r#"fill-rule="evenodd""#));
+		assert!(result.contains(r#"stroke-linecap="round""#));
+		assert!(result.contains(r#"stroke-linejoin="bevel""#));
+		assert!(result.contains(r#"stroke-width="2""#));
+		assert!(result.contains(r#"clip-rule="evenodd""#));
+		assert!(result.contains(r#"opacity=".5""#));
+		assert!(result.contains(r#"transform="translate(1 2)""#));
+		assert!(result.contains(r#"d="M0 0""#));
+
+		Ok(())
+	}
+
+	#[test]
+	fn test_support_xmls_clear_nodes_paint_styles_cleans_inline_style_paint_declarations() -> Result<()> {
+		// -- Setup & Fixtures
+		let xml = r##"<svg><path style="fill: #fff; stroke: #000; opacity: .5" d="M0 0"/></svg>"##;
+
+		// -- Exec
+		let result = clean_svg_inner_content(xml)?;
+
+		// -- Check
+		assert!(result.contains(r#"style="opacity: .5""#));
+		assert!(!result.contains("fill: #fff"));
+		assert!(!result.contains("stroke: #000"));
+
+		Ok(())
+	}
+
+	#[test]
+	fn test_support_xmls_clear_nodes_paint_styles_removes_empty_style_attribute() -> Result<()> {
+		// -- Setup & Fixtures
+		let xml = r##"<svg><path style="fill: #fff; stroke: #000" d="M0 0"/></svg>"##;
+
+		// -- Exec
+		let result = clean_svg_inner_content(xml)?;
+
+		// -- Check
+		assert!(result.contains("path"));
+		assert!(result.contains(r#"d="M0 0""#));
+		assert!(!result.contains("style="));
+
+		Ok(())
+	}
+
+	#[test]
+	fn test_support_xmls_clear_nodes_paint_styles_applies_recursively() -> Result<()> {
+		// -- Setup & Fixtures
+		let xml = r##"<svg><g fill="#111"><path stroke="#222" d="M0 0"/><circle fill="none" cx="1" cy="1" r="1"/></g></svg>"##;
+
+		// -- Exec
+		let result = clean_svg_inner_content(xml)?;
+
+		// -- Check
+		assert!(result.contains("g"));
+		assert!(result.contains("path"));
+		assert!(result.contains("circle"));
+		assert!(!result.contains(r##"fill="#111""##));
+		assert!(!result.contains(r##"stroke="#222""##));
+		assert!(result.contains(r#"fill="none""#));
+
+		Ok(())
+	}
+
+	fn clean_svg_inner_content(xml: &str) -> Result<String> {
+		let nodes = extract_root_inner_nodes(xml).ok_or("Should have nodes")?;
+		let cleaned = clear_nodes_paint_styles(nodes);
+		Ok(nodes_to_string(&cleaned))
+	}
 }
 
 // endregion: --- Tests
