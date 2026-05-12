@@ -1,6 +1,6 @@
-use crate::Result;
 use crate::cli::cmd::SketchCommand;
 use crate::handlers::sketch;
+use crate::{Error, Result};
 use simple_fs::SPath;
 
 pub fn exec_command(command: SketchCommand) -> Result<()> {
@@ -15,6 +15,7 @@ pub fn exec_command(command: SketchCommand) -> Result<()> {
 				args.flatten,
 				args.keep_raw_export,
 				args.clear_styles,
+				args.watch,
 			)
 		}
 	}
@@ -41,6 +42,7 @@ fn exec_export(
 	flatten: bool,
 	keep_raw_export: bool,
 	clear_styles: bool,
+	watch: bool,
 ) -> Result<()> {
 	let sketch_file = SPath::new(sketch_file);
 	let output_dir = SPath::new(output);
@@ -50,12 +52,63 @@ fn exec_export(
 
 	let format_refs: Vec<&str> = formats.iter().map(|s| s.as_str()).collect();
 
+	if watch {
+		watch_export(&sketch_file, glob_arg, &format_refs, &output_dir, flatten, keep_raw_export, clear_styles)
+	} else {
+		run_export(&sketch_file, glob_arg, &format_refs, &output_dir, flatten, keep_raw_export, clear_styles)
+	}
+}
+
+fn run_export(
+	sketch_file: &SPath,
+	glob_patterns: Option<&[&str]>,
+	formats: &[&str],
+	output_dir: &SPath,
+	flatten: bool,
+	keep_raw_export: bool,
+	clear_styles: bool,
+) -> Result<()> {
 	let exported =
-		sketch::export_artboards(&sketch_file, glob_arg, &format_refs, &output_dir, flatten, keep_raw_export, clear_styles)?;
+		sketch::export_artboards(sketch_file, glob_patterns, formats, output_dir, flatten, keep_raw_export, clear_styles)?;
 
 	for path in exported {
 		println!("Exported: {path}");
 	}
 
 	Ok(())
+}
+
+fn watch_export(
+	sketch_file: &SPath,
+	glob_patterns: Option<&[&str]>,
+	formats: &[&str],
+	output_dir: &SPath,
+	flatten: bool,
+	keep_raw_export: bool,
+	clear_styles: bool,
+) -> Result<()> {
+	println!("Watching: {sketch_file}");
+
+	if let Err(err) = run_export(sketch_file, glob_patterns, formats, output_dir, flatten, keep_raw_export, clear_styles) {
+		eprintln!("Export failed: {err}");
+	}
+
+	let watcher = simple_fs::watch(sketch_file.as_std_path()).map_err(Error::custom_from_err)?;
+
+	loop {
+		let events = watcher
+			.rx
+			.recv()
+			.map_err(|err| Error::custom(format!("Sketch file watch channel closed: {err}")))?;
+
+		if events.is_empty() {
+			continue;
+		}
+
+		println!("Sketch file changed, exporting...");
+
+		if let Err(err) = run_export(sketch_file, glob_patterns, formats, output_dir, flatten, keep_raw_export, clear_styles) {
+			eprintln!("Export failed: {err}");
+		}
+	}
 }
