@@ -436,3 +436,99 @@ fn is_single_file_output(output_path: &SPath, formats: &[&str]) -> bool {
 	let ext_lower = ext.to_lowercase();
 	formats.iter().any(|f| f.to_lowercase() == ext_lower)
 }
+
+// region:    --- Tests
+
+#[cfg(test)]
+mod tests {
+	type Result<T> = core::result::Result<T, Box<dyn std::error::Error>>; // For tests.
+
+	use super::*;
+
+	#[test]
+	fn test_sketch_export_convert_svg_to_symbol_preserves_paint_by_default() -> Result<()> {
+		// -- Setup & Fixtures
+		let svg = r##"<svg viewBox="0 0 24 24"><path id="ico/user/fill" fill="#CECECE" stroke="#123456" d="M0 0"/></svg>"##;
+
+		// -- Exec
+		let symbol = convert_svg_to_symbol(svg, "ico-user-fill", false).ok_or("Should convert SVG to symbol")?;
+
+		// -- Check
+		assert!(symbol.contains(r#"<symbol id="ico-user-fill" viewBox="0 0 24 24">"#));
+		assert!(symbol.contains(r#"id="ico-user-fill""#));
+		assert!(symbol.contains(r##"fill="#CECECE""##));
+		assert!(symbol.contains(r##"stroke="#123456""##));
+		assert!(symbol.contains(r#"d="M0 0""#));
+
+		Ok(())
+	}
+
+	#[test]
+	fn test_sketch_export_convert_svg_to_symbol_clear_styles_removes_concrete_paint() -> Result<()> {
+		// -- Setup & Fixtures
+		let svg = r##"<svg viewBox="0 0 24 24"><path id="ico/user/fill" fill="#CECECE" stroke="#123456" d="M0 0"/></svg>"##;
+
+		// -- Exec
+		let symbol = convert_svg_to_symbol(svg, "ico-user-fill", true).ok_or("Should convert SVG to symbol")?;
+
+		// -- Check
+		assert!(symbol.contains(r#"<symbol id="ico-user-fill" viewBox="0 0 24 24">"#));
+		assert!(symbol.contains(r#"id="ico-user-fill""#));
+		assert!(!symbol.contains(r##"fill="#CECECE""##));
+		assert!(!symbol.contains(r##"stroke="#123456""##));
+		assert!(symbol.contains(r#"d="M0 0""#));
+
+		Ok(())
+	}
+
+	#[test]
+	fn test_sketch_export_convert_svg_to_symbol_clear_styles_preserves_none_paint() -> Result<()> {
+		// -- Setup & Fixtures
+		let svg = r#"<svg viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0"/></svg>"#;
+
+		// -- Exec
+		let symbol = convert_svg_to_symbol(svg, "ico-user-fill", true).ok_or("Should convert SVG to symbol")?;
+
+		// -- Check
+		assert!(symbol.contains(r#"fill="none""#));
+		assert!(symbol.contains(r#"stroke="none""#));
+		assert!(symbol.contains(r#"d="M0 0""#));
+
+		Ok(())
+	}
+
+	#[test]
+	fn test_sketch_export_convert_svg_to_symbol_clear_styles_keeps_id_canonicalization() -> Result<()> {
+		// -- Setup & Fixtures
+		let svg = r##"<svg viewBox="0 0 24 24"><g id="ico/user/fill"><path id="Shape 1" fill="#CECECE" d="M0 0"/></g></svg>"##;
+
+		// -- Exec
+		let symbol = convert_svg_to_symbol(svg, "ico-user-fill", true).ok_or("Should convert SVG to symbol")?;
+
+		// -- Check
+		assert!(symbol.contains(r#"id="ico-user-fill""#));
+		assert!(symbol.contains(r#"id="Shape-1""#));
+		assert!(!symbol.contains(r##"fill="#CECECE""##));
+		assert!(symbol.contains(r#"d="M0 0""#));
+
+		Ok(())
+	}
+
+	#[test]
+	fn test_sketch_export_convert_svg_to_symbol_includes_symbol_id_and_viewbox() -> Result<()> {
+		// -- Setup & Fixtures
+		let svg = r#"<svg viewBox="0 0 16 16"><path d="M0 0"/></svg>"#;
+
+		// -- Exec
+		let symbol = convert_svg_to_symbol(svg, "ico-chevron-down", true).ok_or("Should convert SVG to symbol")?;
+
+		// -- Check
+		assert!(symbol.starts_with(r#"  <symbol id="ico-chevron-down" viewBox="0 0 16 16">"#));
+		assert!(symbol.contains(r#"d="M0 0""#));
+		assert!(symbol.ends_with("  </symbol>"));
+
+		Ok(())
+	}
+}
+
+// endregion: --- Tests
